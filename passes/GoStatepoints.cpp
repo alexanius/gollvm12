@@ -1511,10 +1511,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // the "gc arg" slots, of the statepoint. Both are recorded in the stack
     // map the same way. The difference is that "deopt arg" doesn't need
     // relocation. We're implementing non-moving GC (for now).
-    FunctionCallee FCallTarget(Call->getFunctionType(),
-                              Call->getCalledOperand());
     InvokeInst *Invoke = Builder.CreateGCStatepointInvoke(
-        StatepointID, NumPatchBytes, FCallTarget, ToReplace->getNormalDest(),
+        StatepointID, NumPatchBytes, CallTarget, ToReplace->getNormalDest(),
         ToReplace->getUnwindDest(), CallArgs, GCArgs, ArrayRef<Value*>(),
         "statepoint_token");
 
