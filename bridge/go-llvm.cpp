@@ -1594,7 +1594,7 @@ Bexpression *Llvm_backend::makeComplexBinaryExpr(Operator op, Bexpression *left,
   Bexpression *li = imag_part_expression(lvex, location);
   Bexpression *rr = real_part_expression(rvex, location);
   Bexpression *ri = imag_part_expression(rvex, location);
-  Bexpression *val = nullptr;
+  Bexpression *val;
 
   switch (op) {
   case OPERATOR_PLUS:
@@ -2732,26 +2732,24 @@ Bfunction *Llvm_backend::function(Btype *fntype, const std::string &name,
     if (isGCLeaf(fns))
       fcn->addFnAttr("gc-leaf-function");
 
-    auto nonNullAttr = llvm::Attribute::get(context_,
-                                            llvm::Attribute::NonNull);
-    auto noAliasAttr = llvm::Attribute::get(context_,
-                                            llvm::Attribute::NoAlias);
-
     // attributes about runtime functions, to help the optimizer
     if (fns == "runtime.newobject" ||
         fns == "runtime.makeslice" ||
         fns == "runtime.makeslice64" ||
         fns == "runtime.makechan" ||
         fns == "runtime.makechan64") {
-      fcn->addAttributeAtIndex(llvm::AttributeList::ReturnIndex, nonNullAttr);
-      fcn->addAttributeAtIndex(llvm::AttributeList::ReturnIndex, noAliasAttr);
+      fcn->addAttribute(llvm::AttributeList::ReturnIndex,
+                        llvm::Attribute::NonNull);
+      fcn->addAttribute(llvm::AttributeList::ReturnIndex,
+                        llvm::Attribute::NoAlias);
     }
 
     // makemap may return its argument, so not noalias.
     if (fns == "runtime.makemap" ||
         fns == "runtime.makemap64" ||
         fns == "runtime.makemap_small")
-      fcn->addAttributeAtIndex(llvm::AttributeList::ReturnIndex, nonNullAttr);
+      fcn->addAttribute(llvm::AttributeList::ReturnIndex,
+                        llvm::Attribute::NonNull);
 
     // mapaccess1 and mapassign never return nil.
     if (fns == "runtime.mapaccess1" ||
@@ -2765,7 +2763,8 @@ Bfunction *Llvm_backend::function(Btype *fntype, const std::string &name,
         fns == "runtime.mapassign_fast32ptr" ||
         fns == "runtime.mapassign_fast64ptr" ||
         fns == "runtime.mapassign_faststr")
-      fcn->addAttributeAtIndex(llvm::AttributeList::ReturnIndex, nonNullAttr);
+      fcn->addAttribute(llvm::AttributeList::ReturnIndex,
+                        llvm::Attribute::NonNull);
 
     // mapaccess is pure function.
     if (!compilingRuntime_ &&
