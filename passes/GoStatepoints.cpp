@@ -1283,13 +1283,13 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
     return AL;
 
     // Remove the readonly, readnone, and statepoint function attributes.
-  AttrBuilder FnAttrs(Ctx, AL.getFnAttrs());
+  AttrBuilder FnAttrs = AL.getFnAttrs();
   for (auto Attr : FnAttrsToStrip)
     FnAttrs.removeAttribute(Attr);
 
   for (Attribute A : AL.getFnAttrs()) {
     if (isStatepointDirectiveAttr(A))
-      FnAttrs.removeAttribute(A);
+      FnAttrs.remove(A);
   }
 
     // Just skip parameter and return attributes for now
@@ -1994,7 +1994,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 template <typename AttrHolder>
 static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
                                       unsigned Index) {
-  AttrBuilder R(Ctx);
+  AttrBuilder R;
   AttributeSet AS = AH.getAttributes().getAttributes(Index);
   if (AS.getDereferenceableBytes())
     R.addAttribute(Attribute::get(Ctx, Attribute::Dereferenceable,
@@ -2006,9 +2006,8 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
     if (AS.hasAttribute(Attr))
       R.addAttribute(Attr);
 
-  AttributeSet AS2 = AttributeSet::get(Ctx,R);
-  if (AS2.getNumAttributes() > 0)
-    AH.setAttributes(AH.getAttributes().removeAttributesAtIndex(Ctx, Index, AttributeMask(AS2)));
+  if (!R.empty())
+    AH.setAttributes(AH.getAttributes().removeAttributesAtIndex(Ctx, Index, R));
 }
 
 static void stripNonValidAttributesFromPrototype(Function &F) {
@@ -2984,10 +2983,9 @@ fixStackWriteBarriers(Function &F, DefiningValueMapTy &DVCache) {
           // for now. The size is the first field. The optimizer should be
           // able to constant-fold it.
           Value *TD = CI->getArgOperand(1);
-          Type *etyp = TD->getType()->getPointerElementType();
           Value *GEP = Builder.CreateConstInBoundsGEP2_32(
-              etyp, TD, 0, 0);
-          Value *Siz = Builder.CreateLoad(etyp, GEP);
+              TD->getType()->getPointerElementType(), TD, 0, 0);
+          Value *Siz = Builder.CreateLoad(GEP);
           llvm::MaybeAlign malgn(0);
           Builder.CreateMemMove(Dst, malgn, Src, malgn, Siz);
           ToDel.insert(CI);
